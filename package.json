@@ -6,6 +6,6 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
-    "async-mqtt": "^1.0.1"
+    "mqtt": "^2.13.1"
   }
 }
