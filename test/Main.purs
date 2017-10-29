@@ -1,40 +1,60 @@
 module Test.Main where
 
-import Prelude
+import Control.Monad.Aff
+import Control.Monad.Aff.AVar
+import Control.Monad.Aff.Console
+import Control.Monad.Eff.Console as EffLog
 import Network.MQTT
+import Prelude
 
-import Control.Monad.Aff (launchAff)
-import Control.Monad.Aff.Console (log) as AffLog
+import Control.Coroutine (Process, await, runProcess, ($$))
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
+import Control.Monad.Rec.Class (forever)
+import Control.Monad.Trans.Class (lift)
 import Data.Monoid (mempty)
-import Data.Newtype (unwrap, wrap)
-
-options :: Options
-options =
-  { port : 1883
-  , clientId : "purescript-mqtt"
-  , username : mempty
-  , password : mempty
-  }
+import Data.Newtype (wrap)
 
 url :: BrokerUrl
 url = wrap "mqtt://broker.hivemq.com"
 
+options :: Options
+options =
+  { port     : 1883
+  , clientId : "purescript-mqtt-test"
+  , username : mempty
+  , password : mempty
+  }
+
+mqttProcess :: ∀ e. Client -> Process (Aff _) Unit
+mqttProcess client =
+  let mqttProducer = mkMQTTProducer client
+  in mqttProducer $$ mqttConsumer
+
 main :: Eff _ _
-main = void $ launchAff $ do
-  client <- liftEff $ connect url options
+main = do
+  client <- connect url options
+  EffLog.log "Started client."
 
-  onConnectAff client $ do
-    AffLog.log "Connected!"
-    subscribe client $ Topic "purescript-mqtt/test"
-    AffLog.log "Subscribed!"
+  subscribe client $ Topic "test/purescript/mqtt"
+  EffLog.log "Subscribed to \"test/purescript/mqtt\""
 
-  publish client (Topic "purescript-mqtt/test") (Message "test")
+  launchAff_ $ runProcess $ mqttProcess client
 
-  msg <- onMessageAff client $ \_ msg ->
-    pure $ unwrap msg
+  publish client (Topic "test/purescript/mqtt") (Message "test")
 
-  AffLog.log msg
+  launchAff_ $ do
+    delay $ Milliseconds 1000.0
+    liftEff $ end client
 
-  liftEff $ end client
+mqttConsumer :: ∀ e. MQTTConsumer _ Unit
+mqttConsumer = forever do
+  e <- await
+  case e of
+    OnConnect ->
+      lift $ log "Connected"
+    OnMessage (Topic t) (Message m) -> do
+      lift $ log $ "Received new message on topic: " <> t
+      lift $ log m
+    OnClose ->
+      lift $ log "Connection closed."
