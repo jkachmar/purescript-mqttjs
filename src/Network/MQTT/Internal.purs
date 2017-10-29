@@ -18,11 +18,11 @@ newtype Message = Message String
 derive instance ntMessage :: Newtype Message _
 
 --------------------------------------------------------------------------------
--- | Unsafely coerce a `Foreign` value to a `Topic`.
+-- | Unsafely read a `Topic` from some `Foreign` value.
 unsafeReadTopic :: Foreign -> Topic
 unsafeReadTopic t = Topic $ unsafeFromForeign t
 
--- | Unsafely coerce a `Foreign` value to a `Buffer` and read it as a
--- | UTF8-encoded `Message`.
+-- | Unsafely read a `Buffer` from some `Foreign` value and UTF8 decode it to a
+-- | `Message`.
 unsafeReadMessage :: ∀ e. Foreign -> Eff (buffer :: BUFFER | e) Message
 unsafeReadMessage m = Message <$> (toString UTF8 $ unsafeFromForeign m)

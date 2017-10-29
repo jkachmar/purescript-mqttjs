@@ -8,22 +8,8 @@ exports._connect = function(url, opts) {
   return mqtt.connect(url, opts);
 };
 
-exports.onConnect = function(client, handler) {
-  client.on('connect', function() {
-    handler();
-  });
-};
-
-exports.onMessage = function(client, handler) {
-  client.on('message', function(topic, message) {
-    handler(topic)(message)();
-  });
-};
-
-exports.onClose = function(client, handler) {
-  client.on('close', function() {
-    handler();
-  });
+exports._end = function(client) {
+  client.end();
 };
 
 exports._subscribe = function(client, topic) {
@@ -34,6 +20,20 @@ exports._publish = function(client, topic, message) {
   client.publish(topic, message);
 };
 
-exports._end = function(client) {
-  client.end();
+exports._onConnect = function(client, handler) {
+  client.on('connect', function() {
+    handler()();
+  });
+};
+
+exports._onMessage = function(client, handler) {
+  client.on('message', function(topic, message) {
+    handler(topic)(message)();
+  });
+};
+
+exports._onClose = function(client, handler) {
+  client.on('close', function() {
+    handler()();
+  });
 };

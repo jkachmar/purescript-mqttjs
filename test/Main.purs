@@ -3,17 +3,18 @@ module Test.Main where
 import Control.Monad.Aff
 import Control.Monad.Aff.AVar
 import Control.Monad.Aff.Console
-import Control.Monad.Eff.Console as EffLog
 import Network.MQTT
+import Network.MQTT.Coroutine
 import Prelude
 
 import Control.Coroutine (Process, await, runProcess, ($$))
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
+import Control.Monad.Eff.Console as EffLog
 import Control.Monad.Rec.Class (forever)
 import Control.Monad.Trans.Class (lift)
 import Data.Monoid (mempty)
-import Data.Newtype (wrap)
+import Data.Newtype (unwrap, wrap)
 
 url :: BrokerUrl
 url = wrap "mqtt://broker.hivemq.com"
@@ -32,29 +33,37 @@ mqttProcess client =
   in mqttProducer $$ mqttConsumer
 
 main :: Eff _ _
-main = do
-  client <- connect url options
-  EffLog.log "Started client."
+main = launchAff_ do
+  client <- liftEff $ connect url options
+  log $ "Connected to " <> unwrap url
 
-  subscribe client $ Topic "test/purescript/mqtt"
-  EffLog.log "Subscribed to \"test/purescript/mqtt\""
+  let topic = Topic "test/purescript/mqtt"
+  liftEff $ subscribe client topic
+  log $ "Subscribed to " <> unwrap topic
 
-  launchAff_ $ runProcess $ mqttProcess client
+  _ <- forkAff $ runProcess $ mqttProcess client
+  log $ "Spawned coroutine process that logs events to stdout."
 
-  publish client (Topic "test/purescript/mqtt") (Message "test")
+  let msg = Message "test"
+  liftEff $ publish client topic msg
+  liftEff $ publish client topic msg
+  liftEff $ publish client topic msg
+  log $ "Published " <> unwrap msg <> " to " <> unwrap topic
 
-  launchAff_ $ do
-    delay $ Milliseconds 1000.0
-    liftEff $ end client
+  delay $ Milliseconds 1000.0
+  liftEff $ end client
+  log $ "Disconnected from " <> unwrap url
 
 mqttConsumer :: ∀ e. MQTTConsumer _ Unit
 mqttConsumer = forever do
   e <- await
   case e of
-    OnConnect ->
-      lift $ log "Connected"
-    OnMessage (Topic t) (Message m) -> do
-      lift $ log $ "Received new message on topic: " <> t
-      lift $ log m
-    OnClose ->
+    OnConnect -> do
+      lift $ log "Connected to MQTT broker."
+    OnMessage t m -> do
+      lift
+        $ log
+        $ "Received message \"" <> unwrap m
+        <> "\" on topic \""     <> unwrap t <> "\""
+    OnClose -> do
       lift $ log "Connection closed."
