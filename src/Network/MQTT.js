@@ -22,18 +22,18 @@ exports._publish = function(client, topic, message) {
 
 exports._onConnect = function(client, handler) {
   client.on('connect', function() {
-    handler()();
+    handler();
   });
 };
 
 exports._onMessage = function(client, handler) {
   client.on('message', function(topic, message) {
-    handler(topic)(message)();
+    handler(topic, message);
   });
 };
 
 exports._onClose = function(client, handler) {
   client.on('close', function() {
-    handler()();
+    handler();
   });
 };
