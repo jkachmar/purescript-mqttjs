@@ -1,19 +1,17 @@
 module Test.Main where
 
+import Prelude
 import Control.Monad.Aff
 import Control.Monad.Aff.AVar
 import Control.Monad.Aff.Console
 import Network.MQTT
 import Network.MQTT.Coroutine
-import Prelude
 
 import Control.Coroutine (Process, await, runProcess, ($$))
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
-import Control.Monad.Eff.Console as EffLog
 import Control.Monad.Rec.Class (forever)
 import Control.Monad.Trans.Class (lift)
-import Data.Maybe (fromMaybe)
 import Data.Monoid (mempty)
 import Data.Newtype (unwrap, wrap)
 import Test.Spec (describe, it)
@@ -32,13 +30,16 @@ main = run [consoleReporter] do
         ref <- makeEmptyVar
         _   <- forkAff $ runProcess $ mqttProcess client ref
 
-        liftEff $ subscribe client $ Topic "test/purescript-mqtt"
-        liftEff $ publish client (Topic "test/purescript-mqtt") (Message "test")
+        let topic   = Topic "test/purescript/mqtt"
+        let message = Message "MQTT test message"
+
+        liftEff $ subscribe client topic
+        liftEff $ publish client topic message
         liftEff $ end client
 
         msg <- takeVar ref
-        msg.topic   `shouldEqual` "test/purescript-mqtt"
-        msg.message `shouldEqual` "test"
+        msg.topic   `shouldEqual` unwrap topic
+        msg.message `shouldEqual` unwrap message
 
 --------------------------------------------------------------------------------
 mqttConsumer
