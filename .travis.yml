@@ -3,8 +3,10 @@ sudo: required
 dist: trusty
 node_js: 8
 install:
+  - sudo apt-get install mosquitto
   - npm install -g purescript@0.11.6 pulp bower
 script:
+  - mosquitto &
   - npm install
   - bower install
   - pulp test

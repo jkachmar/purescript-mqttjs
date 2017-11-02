@@ -3,7 +3,9 @@
     "test": "test"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "preinstall": "bower install",
+    "postinstall": "pulp build",
+    "test": "pulp test"
   },
   "dependencies": {
     "mqtt": "^2.13.1"
